@@ -1,0 +1,23 @@
+{
+  "name": "vue2.channel-kit-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite --host 0.0.0.0 --port 5190",
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "channel-model-kit": "file:../simu-pro-jingmei/src/chanel-model-kit/channel-model-kit-1.0.1.tgz",
+    "vue": "^2.7.16"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue2": "^2.3.4",
+    "vite": "^5.4.19"
+  }
+}

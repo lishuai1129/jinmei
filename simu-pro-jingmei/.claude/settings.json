@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /e/simu-pro-jingmei/src -type f -iname *channel* -o -iname *emane* -o -iname *propagation* -o -iname *radio*)"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "channel-model-kit",
+  "version": "1.0.2",
+  "description": "Standalone channel model dialogs, monitor panel and API runtime for Vue2 hosts.",
+  "type": "module",
+  "main": "./dist/channel-model-kit.iife.js",
+  "module": "./dist/channel-model-kit.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/channel-model-kit.es.js",
+      "default": "./dist/channel-model-kit.iife.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build && node scripts/write-types.cjs",
+    "pack:local": "npm run build && npm pack"
+  },
+  "keywords": [
+    "channel-model",
+    "vue2",
+    "vue3",
+    "echarts"
+  ],
+  "license": "UNLICENSED",
+  "private": false,
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.2",
+    "echarts": "^5.6.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1",
+    "vue": "^3.5.13"
+  }
+}

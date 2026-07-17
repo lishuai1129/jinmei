@@ -1,0 +1,710 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>channel-model-kit 测试</title>
+  <link rel="stylesheet" href="./style.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #07111f;
+      color: #d8ffe6;
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      padding: 24px;
+    }
+
+    .page-shell {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .test-card {
+      border: 1px solid rgba(47, 158, 68, 0.45);
+      border-radius: 8px;
+      background: rgba(9, 24, 45, 0.92);
+      padding: 16px;
+    }
+
+    .test-card + .test-card {
+      margin-top: 14px;
+    }
+
+    .test-card h2 {
+      margin: 0 0 12px;
+      color: #57d86b;
+      font-size: 16px;
+    }
+
+    .test-card p {
+      margin: 0 0 10px;
+      color: #a8bdd8;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .test-btn {
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid #2f9e44;
+      border-radius: 6px;
+      background: #1f7a3a;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .test-btn:hover {
+      background: #2f9e44;
+    }
+
+    .test-btn.secondary {
+      border-color: #238be6;
+      background: #164f87;
+    }
+
+    .test-btn.secondary:hover {
+      background: #1d6db7;
+    }
+
+    .test-btn.ghost {
+      color: #cfe7ff;
+      border-color: #375c8b;
+      background: #182943;
+    }
+
+    .test-textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      padding: 10px;
+      color: #d8ffe6;
+      background: #091527;
+      border: 1px solid rgba(77, 136, 206, 0.5);
+      border-radius: 6px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .stage {
+      min-height: calc(100vh - 48px);
+      border: 1px solid rgba(35, 139, 230, 0.28);
+      border-radius: 8px;
+      background: rgba(6, 15, 30, 0.72);
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .stage-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      color: #a8bdd8;
+      font-size: 13px;
+    }
+
+    #panel {
+      width: 560px;
+      max-width: 100%;
+    }
+
+    #dialog {
+      position: relative;
+      z-index: 2;
+    }
+
+    .log-box {
+      margin-top: 12px;
+      padding: 10px;
+      min-height: 42px;
+      color: #93ffad;
+      white-space: pre-wrap;
+      background: #081321;
+      border: 1px solid rgba(47, 158, 68, 0.3);
+      border-radius: 6px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .page-shell {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-shell">
+    <aside>
+      <div class="test-card">
+        <h2>配置弹窗测试</h2>
+        <p>这里是 10 个模型配置入口。确认配置后会先 POST 到后端，再 GET latest 并渲染。</p>
+        <div id="configButtons" class="test-grid"></div>
+      </div>
+
+      <div class="test-card">
+        <h2>链路监控测试</h2>
+        <p>蓝色按钮只请求对应模型 latest 并渲染；灰色 Mock 按钮使用本地假数据。完整 POST 流程请点上面的配置按钮后确认。</p>
+        <div id="monitorButtons" class="test-grid"></div>
+      </div>
+
+      <div class="test-card">
+        <h2>后端请求配置预留</h2>
+        <p>这里你自己改后端地址。点击蓝色请求按钮时，会读取对应模型的 latest 地址发 GET。</p>
+        <textarea id="endpointEditor" class="test-textarea"></textarea>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button class="test-btn ghost" onclick="saveEndpointConfig()">保存配置到变量</button>
+          <button class="test-btn ghost" onclick="clearPastedData()">清空数据</button>
+        </div>
+      </div>
+
+      <div class="test-card">
+        <h2>粘贴真实数据</h2>
+        <p>把任意模型 /latest 的完整 JSON 粘到这里，链路监控会按 model 字段识别。</p>
+        <textarea id="latestDataEditor" class="test-textarea" placeholder='例如：{"model":"5g","channel_metrics":{},"data":{}}'></textarea>
+      </div>
+
+      <div id="logBox" class="log-box">等待操作...</div>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-toolbar">
+        <span>channel-model-kit 独立包测试台</span>
+        <button class="test-btn ghost" onclick="closeAll()">关闭所有面板</button>
+      </div>
+      <div id="panel"></div>
+      <div id="dialog"></div>
+    </main>
+  </div>
+
+  <script src="./channel-model-kit.iife.js"></script>
+  <script>
+    const MODELS = [
+      { type: 'ttc', label: '测控链' },
+      { type: 'coordination', label: '协同链' },
+      { type: 'adhoc', label: '自组网' },
+      { type: 'vhf', label: 'VHF' },
+      { type: 'uhf', label: 'UHF' },
+      { type: 'fiveG', label: '5G通信' },
+      { type: 'dss', label: '短波' },
+      { type: 'fhss', label: '中长波' },
+      { type: 'gfsk', label: '卫星' },
+      { type: 'custom', label: '散射' }
+    ]
+
+    // 后端请求配置预留：你后续自己改这里，或者在页面文本框里改。
+    // 如果要让插件 runtime 自己请求，可以把这个对象传给 createChannelModelKit / Vue.use。
+    let ENDPOINTS = {
+      ttc: { post: '/ttc', latest: '/ttc-latest' },
+      coordination: { post: '/coordination', latest: '/coordination-latest' },
+      adhoc: { post: '/adhoc', latest: '/adhoc-latest' },
+      vhf: { post: '/vhf', latest: '/vhf-latest' },
+      uhf: { post: '/uhf', latest: '/uhf-latest' },
+      fiveG: { post: '/5g', latest: '/5g-latest' },
+      dss: { post: '/dsss', latest: '/dsss-latest' },
+      fhss: { post: '/fhss', latest: '/fhss-latest' },
+      gfsk: { post: '/gfsk', latest: '/gfsk-latest' },
+      custom: { post: '/choose', latest: '/choose-latest' }
+    }
+    let panelHandle
+    let dialogHandle
+
+    // 前端链路位置配置预留：真实接入时由 Vue2 项目传源节点/目标节点坐标。
+    const LINK_CONTEXT = {
+      node_id: 1,
+      tx: { lat: 30.0, lon: 100.0, alt: 1000.0 },
+      rx: { lat: 30.18, lon: 100.0, alt: 0.0 },
+      payload: [72, 101, 108, 108, 111]
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('endpointEditor').value = JSON.stringify(ENDPOINTS, null, 2)
+      renderButtons()
+      log('页面已加载，可以测试 10 个模型。')
+    })
+
+    function renderButtons() {
+      const configRoot = document.getElementById('configButtons')
+      const monitorRoot = document.getElementById('monitorButtons')
+
+      configRoot.innerHTML = MODELS.map(model => (
+        '<button class="test-btn" onclick="openConfig(\'' + model.type + '\')">' + model.label + '配置</button>'
+      )).join('')
+
+      monitorRoot.innerHTML = MODELS.map(model => (
+        '<button class="test-btn secondary" onclick="openMonitor(\'' + model.type + '\')">请求' + model.label + '</button>' +
+        '<button class="test-btn ghost" onclick="openMockMonitor(\'' + model.type + '\')">Mock</button>'
+      )).join('')
+    }
+
+    window.openConfig = function (modelType) {
+      if (!window.ChannelModelKit) {
+        log('ChannelModelKit 未加载，请检查 channel-model-kit.iife.js 路径。')
+        return
+      }
+
+      if (dialogHandle) dialogHandle.unmount()
+
+      const commonOptions = {
+        visible: true,
+        position: { lat: 30, lon: 100, alt: 0 },
+        nodeId: 1,
+        onConfirm: async function (config) {
+          log('配置确认，开始 POST 到后端：\n' + JSON.stringify(config, null, 2))
+          dialogHandle.update({ visible: false })
+          try {
+            await postConfigThenFetchLatest(modelType, config)
+          } catch (error) {
+            log('POST 配置或 GET latest 失败：\n' + (error && error.message ? error.message : String(error)) + '\n\n如果是 CORS，请改成同源代理路径或让后端加跨域。')
+          }
+        },
+        onCancel: function () {
+          log('已取消配置：' + modelType)
+          dialogHandle.update({ visible: false })
+        }
+      }
+
+      if (modelType === 'custom') {
+        dialogHandle = window.ChannelModelKit.mountCustomConfigDialog('#dialog', commonOptions)
+      } else {
+        dialogHandle = window.ChannelModelKit.mountModelConfigDialog('#dialog', {
+          ...commonOptions,
+          modelType: modelType
+        })
+      }
+
+      log('打开配置弹窗：' + getModelLabel(modelType))
+    }
+
+    window.openMonitor = async function (modelType) {
+      if (!window.ChannelModelKit) {
+        log('ChannelModelKit 未加载，请检查 channel-model-kit.iife.js 路径。')
+        return
+      }
+
+      const pasted = readPastedLatestData()
+      if (pasted) {
+        mountMonitorWithData(modelType, pasted, '使用粘贴的真实数据。')
+        return
+      }
+
+      try {
+        const data = await requestLatestData(modelType)
+        document.getElementById('latestDataEditor').value = JSON.stringify(data, null, 2)
+        mountMonitorWithData(modelType, data, '请求成功，已渲染后端 latest 数据。')
+      } catch (error) {
+        log('请求 ' + getModelLabel(modelType) + ' latest 失败：\n' + (error && error.message ? error.message : String(error)) + '\n\n如果是 CORS，请改成同源代理路径或让后端加跨域。')
+      }
+    }
+
+    window.openMockMonitor = function (modelType) {
+      if (!window.ChannelModelKit) {
+        log('ChannelModelKit 未加载，请检查 channel-model-kit.iife.js 路径。')
+        return
+      }
+      mountMonitorWithData(modelType, createMockData(modelType), '使用内置 mock 数据。')
+    }
+
+    async function postConfigThenFetchLatest(modelType, config) {
+      saveEndpointConfig(false)
+      const endpoint = ENDPOINTS && ENDPOINTS[modelType]
+      if (!endpoint || !endpoint.post) {
+        throw new Error('没有配置 ' + modelType + ' 的 post 地址')
+      }
+
+      const api = window.ChannelModelKit.createApiClient({ endpoints: ENDPOINTS })
+      const payload = api.buildRequestPayload(modelType, config, LINK_CONTEXT)
+
+      log('正在 POST ' + getModelLabel(modelType) + ' 配置：\n' + endpoint.post + '\n\nPayload:\n' + JSON.stringify(payload, null, 2))
+      await api.postModel(modelType, payload)
+
+      log('POST 完成，正在请求 latest...')
+      const latest = await waitForLatestData(modelType)
+      document.getElementById('latestDataEditor').value = JSON.stringify(latest, null, 2)
+      mountMonitorWithData(modelType, latest, 'POST 配置完成，并已渲染 latest 数据。')
+    }
+    async function waitForLatestData(modelType) {
+      const maxAttempts = 10
+      const intervalMs = 300
+      let lastData = null
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const data = await requestLatestData(modelType, attempt > 1)
+        lastData = data
+
+        if (isUsefulLatestData(data, modelType)) {
+          if (attempt > 1) {
+            log('latest 已刷新到 ' + getModelLabel(modelType) + ' 数据，第 ' + attempt + ' 次请求成功。')
+          }
+          return data
+        }
+
+        log('latest 暂未刷新到 ' + getModelLabel(modelType) + ' 数据，第 ' + attempt + '/' + maxAttempts + ' 次等待...')
+        await sleep(intervalMs)
+      }
+
+      log('latest 多次请求后仍为空或模型不匹配，将渲染最后一次返回，方便你在面板和 Network 里排查。')
+      return lastData
+    }
+
+    function isUsefulLatestData(data, modelType) {
+      if (!data || typeof data !== 'object') return false
+      if (Array.isArray(data)) return data.length > 0
+
+      const keys = Object.keys(data)
+      if (keys.length === 0) return false
+
+      const backendModel = normalizeBackendModel(data.model || data.modelType || data.phy_type)
+      if (backendModel && backendModel !== modelType) return false
+
+      if (data.channel_metrics && Object.keys(data.channel_metrics).length > 0) return true
+      if (data.data && Object.keys(data.data).length > 0) return true
+      if (Array.isArray(data.spectrum_data) && data.spectrum_data.length > 0) return true
+      return keys.length > 2
+    }
+
+    function pickNestedModelData(payload, modelType) {
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+      const target = normalizeBackendModel(modelType)
+      const keys = Object.keys(payload)
+      for (let i = 0; i < keys.length; i++) {
+        if (normalizeBackendModel(keys[i]) === target) return payload[keys[i]]
+      }
+      return null
+    }
+
+    function isModelMapPayload(payload, modelType) {
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false
+      if (payload.model || payload.modelType || payload.phy_type || payload.channel_metrics || payload.channelMetrics || payload.data) return false
+      return !!pickNestedModelData(payload, modelType)
+    }
+
+    function normalizeBackendModel(model) {
+      if (model == null) return ''
+      const key = String(model).trim().toLowerCase()
+      const map = {
+        ckl: 'ttc',
+        ttc: 'ttc',
+        xtl: 'coordination',
+        coordination: 'coordination',
+        zzw: 'adhoc',
+        adhoc: 'adhoc',
+        vhf: 'vhf',
+        uhf: 'uhf',
+        '5g': 'fiveG',
+        fiveg: 'fiveG',
+        sw: 'dss',
+        dss: 'dss',
+        dsss: 'dss',
+        mlw: 'fhss',
+        fhss: 'fhss',
+        satellite: 'gfsk',
+        sat: 'gfsk',
+        gfsk: 'gfsk',
+        choose: 'custom',
+        custom: 'custom'
+      }
+      return map[key] || key
+    }
+
+    function sleep(ms) {
+      return new Promise(function (resolve) {
+        setTimeout(resolve, ms)
+      })
+    }
+    async function requestLatestData(modelType, silent) {
+      saveEndpointConfig(false)
+      const latestUrl = getLatestEndpoint(modelType)
+      if (!latestUrl) {
+        throw new Error('没有配置 ' + modelType + ' 的 latest 地址')
+      }
+
+      if (!silent) log('正在请求 ' + getModelLabel(modelType) + '：\n' + latestUrl)
+      const response = await fetch(latestUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      })
+
+      const text = await response.text()
+      if (!response.ok) {
+        throw new Error('HTTP ' + response.status + ' ' + response.statusText + '\n' + text)
+      }
+
+      try {
+        return text ? JSON.parse(text) : null
+      } catch (error) {
+        throw new Error('响应不是合法 JSON：\n' + text.slice(0, 500))
+      }
+    }
+
+    function getLatestEndpoint(modelType) {
+      return ENDPOINTS && ENDPOINTS[modelType] && ENDPOINTS[modelType].latest
+    }
+
+    function mountMonitorWithData(modelType, data, sourceText) {
+      if (panelHandle) panelHandle.unmount()
+
+      const monitorOptions = {
+        visible: true,
+        model: modelType,
+        title: getModelLabel(modelType) + '链路监控',
+        endpoints: ENDPOINTS,
+        onClose: function () {
+          panelHandle.update({ visible: false })
+        }
+      }
+
+      if (isModelMapPayload(data, modelType)) {
+        monitorOptions.dataByModel = data
+      } else {
+        monitorOptions.data = data
+      }
+
+      panelHandle = window.ChannelModelKit.mountLinkMonitor('#panel', monitorOptions)
+
+      log('打开链路监控：' + getModelLabel(modelType) + '\n' + sourceText)
+    }
+    window.saveEndpointConfig = function (shouldLog) {
+      try {
+        ENDPOINTS = JSON.parse(document.getElementById('endpointEditor').value)
+        if (shouldLog !== false) {
+          log('ENDPOINTS 已保存到页面变量：\n' + JSON.stringify(ENDPOINTS, null, 2))
+        }
+      } catch (error) {
+        log('ENDPOINTS JSON 解析失败：' + error.message)
+        throw error
+      }
+    }
+    window.clearPastedData = function () {
+      document.getElementById('latestDataEditor').value = ''
+      log('已清空粘贴数据。')
+    }
+
+    window.closeAll = function () {
+      if (panelHandle) {
+        panelHandle.unmount()
+        panelHandle = null
+      }
+      if (dialogHandle) {
+        dialogHandle.unmount()
+        dialogHandle = null
+      }
+      log('已关闭所有面板。')
+    }
+
+    function readPastedLatestData() {
+      const text = document.getElementById('latestDataEditor').value.trim()
+      if (!text) return null
+      try {
+        return JSON.parse(text)
+      } catch (error) {
+        log('粘贴数据 JSON 解析失败，改用 mock 数据：' + error.message)
+        return null
+      }
+    }
+
+    function getModelLabel(modelType) {
+      const item = MODELS.find(model => model.type === modelType)
+      return item ? item.label : modelType
+    }
+
+    function log(message) {
+      document.getElementById('logBox').textContent = message
+      console.log(message)
+    }
+
+    function createMockData(modelType) {
+      const now = Date.now()
+      const baseMetrics = {
+        large_scale: {
+          distance_m: 939.24,
+          path_loss_db: 102.75,
+          shadowing_loss_db: -1.38,
+          total_loss_db: 101.37
+        },
+        small_scale: {
+          rician_k_db: 3,
+          fading_loss_db: -0.82,
+          doppler_hz: 116.75
+        },
+        link_quality: {
+          snr_db: 31.42,
+          bit_error_rate: 0.00001,
+          receiver_noise_figure_db: 7
+        },
+        network_characteristics: {
+          delay_ms: 2.003,
+          bandwidth_limit_hz: 100000000,
+          transmission_rate_bps: 130000000,
+          packet_loss_rate: 0
+        }
+      }
+
+      const commonData = {
+        original_bits: [0, 1, 1, 0, 1, 0, 0, 1],
+        demodulated_bits: [0, 1, 1, 0, 1, 0, 0, 1],
+        tx_samples: makeIqPoints(64, 0.7),
+        rx_samples: makeIqPoints(64, 0.68, 0.08),
+        recovered_samples: makeIqPoints(64, 0.7, 0.02)
+      }
+
+      const byModel = {
+        ttc: { backend: 'ckl', extra: { data: commonData } },
+        coordination: { backend: 'xtl', extra: { data: commonData } },
+        adhoc: { backend: 'zzw', extra: { data: commonData } },
+        vhf: {
+          backend: 'vhf',
+          extra: {
+            spectrum_data: [-85, -82.1, -79.3, -81.2],
+            data: {
+              original_bits: [1, 0, 1, 1],
+              restored_constellation: [[0.71, 0.70], [-0.72, 0.69]],
+              transmitter_iq: [[0.12, -0.03], [0.11, -0.02]],
+              receiver_iq: [[0.10, -0.04], [0.09, -0.01]],
+              constellation_after_channel: [[0.68, 0.73], [-0.70, 0.65]],
+              spectrum_data: [-85, -82.1, -79.3]
+            }
+          }
+        },
+        uhf: {
+          backend: 'uhf',
+          extra: {
+            spectrum_data: [-80.2, -78.5, -76.1, -79.0],
+            data: {
+              original_bits: [1, 0, 1, 1],
+              restored_constellation: [[0.71, 0.70], [-0.72, 0.69]],
+              transmitter_iq: [[0.12, -0.03], [0.11, -0.02]],
+              receiver_iq: [[0.10, -0.04], [0.09, -0.01]],
+              constellation_after_channel: [[0.68, 0.73], [-0.70, 0.65]],
+              spectrum_data: [-85, -82.1, -79.3]
+            }
+          }
+        },
+        fiveG: {
+          backend: '5g',
+          extra: {
+            carrier_freq_mhz: 3500,
+            spectrum_data: [-45.3, -48.1, -51.7, -49.2],
+            data: {
+              num_in_240_200: [0, 1, 1, 0, 1, 0, 0, 1],
+              de_scram_out_240_200: [0, 1, 1, 0, 1, 0, 0, 1],
+              qam_mapped: makeIqPoints(96, 0.9),
+              de_interFrq_out: makeIqPoints(96, 1.1, 0.28),
+              de_sfo_comp: makeIqPoints(96, 1.0, 0.18)
+            }
+          }
+        },
+        dss: {
+          backend: 'sw',
+          extra: {
+            data: {
+              original_bits: [0, 1, 1, 0, 1, 0, 0, 1],
+              demodulated_bits: [0, 1, 1, 0, 1, 0, 0, 1],
+              tx_samples: makeIqPoints(64, 0.7),
+              rx_samples: makeIqPoints(64, 0.68, 0.08)
+            }
+          }
+        },
+        fhss: {
+          backend: 'mlw',
+          extra: {
+            data: {
+              original_bits: [0, 1, 0, 0, 1, 0, 0, 0],
+              recovered_bits: [0, 1, 0, 0, 1, 0, 0, 0],
+              modulated_iq: [[0.707, 0.707], [-0.707, 0.707]],
+              channel_iq: [[0.699, 0.701], [-0.702, 0.710]],
+              recovered_iq: [[0.707, 0.707], [-0.707, 0.707]]
+            }
+          }
+        },
+        gfsk: {
+          backend: 'satellite',
+          extra: {
+            channel_metrics: {
+              large_scale: {
+                fspl_db: 207.15,
+                atm_loss_db: 0.15,
+                shadowing_db: 0,
+                total_path_loss_db: 207.3
+              },
+              small_scale: {
+                rician_k_db: 12,
+                fading_loss_db: -0.52,
+                doppler_hz: 240.5
+              },
+              network_characteristics: {
+                transmission_delay_ms: 258.4,
+                channel_bandwidth_limit_hz: 36000000,
+                actual_transmission_rate_bps: 15240000,
+                packet_drop_rate: 0
+              },
+              performance: {
+                snr_db: 15.42,
+                ber: 0,
+                interference_ratio: 0.0287
+              }
+            },
+            data: {
+              original_bits: [1, 0, 1, 1, 0, 0, 1, 1],
+              demodulated_bits: [1, 0, 1, 1, 0, 0, 1, 1],
+              tx_samples: makeIqPoints(64, 0.7),
+              rx_samples: makeIqPoints(64, 0.69, 0.08),
+              recovered_samples: makeIqPoints(64, 0.7, 0.02)
+            }
+          }
+        },
+        custom: {
+          backend: 'choose',
+          extra: { data: commonData }
+        }
+      }
+
+      const item = byModel[modelType] || byModel.fiveG
+      return {
+        model: item.backend,
+        node_id: 1,
+        modulation_type: 2,
+        timestamp: now,
+        channel_metrics: item.extra.channel_metrics || baseMetrics,
+        ...item.extra
+      }
+    }
+
+    function makeIqPoints(count, radius, noise) {
+      const result = []
+      const jitter = noise || 0
+      for (let index = 0; index < count; index++) {
+        const angle = (index / count) * Math.PI * 2
+        const delta = jitter ? (Math.sin(index * 7.13) * jitter) : 0
+        result.push({
+          real: Number((Math.cos(angle) * (radius + delta)).toFixed(4)),
+          imag: Number((Math.sin(angle) * (radius - delta)).toFixed(4))
+        })
+      }
+      return result
+    }
+  </script>
+</body>
+</html>
+
+
+
+
